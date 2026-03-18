@@ -16,7 +16,6 @@ struct RSSReaderApp: App {
         } catch {
             fatalError("SwiftData container konnte nicht erstellt werden: \(error)")
         }
-        notificationService.requestPermission()
     }
 
     var body: some Scene {
@@ -26,6 +25,7 @@ struct RSSReaderApp: App {
                 .environment(ruleEngine)
                 .environment(refreshManager)
                 .onAppear {
+                    notificationService.requestPermission()
                     refreshManager.start(
                         fetchService: fetchService,
                         ruleEngine: ruleEngine,
