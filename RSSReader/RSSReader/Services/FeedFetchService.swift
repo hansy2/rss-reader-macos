@@ -41,6 +41,7 @@ final class FeedFetchService {
         }
 
         try? modelContext.save()
+        updateWidget(modelContext: modelContext)
     }
 
     @MainActor
@@ -52,6 +53,24 @@ final class FeedFetchService {
         }
         feed.lastFetchedAt = .now
         try? modelContext.save()
+    }
+
+    @MainActor
+    private func updateWidget(modelContext: ModelContext) {
+        let descriptor = FetchDescriptor<FeedItem>(
+            sortBy: [SortDescriptor(\.publishedAt, order: .reverse)]
+        )
+        guard let items = try? modelContext.fetch(descriptor) else { return }
+        let widgetArticles = Array(items.prefix(20)).map {
+            WidgetArticle(
+                id: $0.guid,
+                title: $0.title,
+                feedTitle: $0.feed?.title ?? "",
+                publishedAt: $0.publishedAt,
+                url: $0.url
+            )
+        }
+        WidgetDataBridge.write(articles: widgetArticles)
     }
 
     private func fetchFeed(_ feed: Feed) async -> [FeedItem]? {
