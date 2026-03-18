@@ -26,6 +26,8 @@ public enum WidgetDataBridge {
     public static func write(articles: [WidgetArticle]) {
         guard let data = try? JSONEncoder().encode(articles) else { return }
         defaults?.set(data, forKey: articlesKey)
+        // WidgetCenter requires a registered widget extension; skip when unbundled
+        guard Bundle.main.bundleIdentifier != nil else { return }
         WidgetCenter.shared.reloadAllTimelines()
     }
 
