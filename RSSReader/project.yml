@@ -20,23 +20,20 @@ targets:
       - path: Shared
     dependencies:
       - package: FeedKit
+      - target: RSSReaderWidget
+        embed: true
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.rssreader.app
         PRODUCT_NAME: RSSReader
         SWIFT_VERSION: 5.10
         MACOSX_DEPLOYMENT_TARGET: "14.0"
-        CODE_SIGN_STYLE: Automatic
+        CODE_SIGN_STYLE: Manual
+        CODE_SIGN_IDENTITY: "-"
+        CODE_SIGNING_REQUIRED: NO
+        CODE_SIGNING_ALLOWED: NO
         DEVELOPMENT_TEAM: ""
         INFOPLIST_FILE: RSSReader/Info.plist
-    entitlements:
-      path: RSSReader/RSSReader.entitlements
-      properties:
-        com.apple.security.app-sandbox: true
-        com.apple.security.network.client: true
-        com.apple.application-identifier: $(PRODUCT_BUNDLE_IDENTIFIER)
-        com.apple.security.application-groups:
-          - group.com.rssreader.shared
 
   RSSReaderWidget:
     type: app-extension
@@ -51,15 +48,10 @@ targets:
         PRODUCT_NAME: RSSReaderWidget
         SWIFT_VERSION: 5.10
         MACOSX_DEPLOYMENT_TARGET: "14.0"
-        CODE_SIGN_STYLE: Automatic
+        CODE_SIGN_STYLE: Manual
+        CODE_SIGN_IDENTITY: "-"
+        CODE_SIGNING_REQUIRED: NO
+        CODE_SIGNING_ALLOWED: NO
         DEVELOPMENT_TEAM: ""
         INFOPLIST_FILE: RSSReaderWidget/Info.plist
         LD_RUNPATH_SEARCH_PATHS: $(inherited) @executable_path/../../../../Frameworks @executable_path/../Frameworks
-    entitlements:
-      path: RSSReaderWidget/RSSReaderWidget.entitlements
-      properties:
-        com.apple.security.app-sandbox: true
-        com.apple.security.network.client: true
-        com.apple.application-identifier: $(PRODUCT_BUNDLE_IDENTIFIER)
-        com.apple.security.application-groups:
-          - group.com.rssreader.shared
