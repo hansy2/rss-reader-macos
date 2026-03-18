@@ -1,0 +1,57 @@
+name: RSSReader
+options:
+  bundleIdPrefix: com.rssreader
+  deploymentTarget:
+    macOS: "14.0"
+  xcodeVersion: "16"
+  createIntermediateGroups: true
+
+packages:
+  FeedKit:
+    url: https://github.com/nmdias/FeedKit.git
+    from: 9.1.2
+
+targets:
+  RSSReader:
+    type: application
+    platform: macOS
+    sources:
+      - path: RSSReader
+      - path: Shared
+    dependencies:
+      - package: FeedKit
+      - target: RSSReaderWidget
+        embed: true
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.rssreader.app
+        PRODUCT_NAME: RSSReader
+        SWIFT_VERSION: 5.10
+        MACOSX_DEPLOYMENT_TARGET: "14.0"
+        CODE_SIGN_STYLE: Manual
+        CODE_SIGN_IDENTITY: "-"
+        CODE_SIGNING_REQUIRED: NO
+        CODE_SIGNING_ALLOWED: NO
+        DEVELOPMENT_TEAM: ""
+        INFOPLIST_FILE: RSSReader/Info.plist
+
+  RSSReaderWidget:
+    type: app-extension
+    platform: macOS
+    sources:
+      - path: RSSReaderWidget
+      - path: Shared/AppGroup.swift
+      - path: Shared/WidgetDataBridge.swift
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.rssreader.app.widget
+        PRODUCT_NAME: RSSReaderWidget
+        SWIFT_VERSION: 5.10
+        MACOSX_DEPLOYMENT_TARGET: "14.0"
+        CODE_SIGN_STYLE: Manual
+        CODE_SIGN_IDENTITY: "-"
+        CODE_SIGNING_REQUIRED: NO
+        CODE_SIGNING_ALLOWED: NO
+        DEVELOPMENT_TEAM: ""
+        INFOPLIST_FILE: RSSReaderWidget/Info.plist
+        LD_RUNPATH_SEARCH_PATHS: $(inherited) @executable_path/../../../../Frameworks @executable_path/../Frameworks
