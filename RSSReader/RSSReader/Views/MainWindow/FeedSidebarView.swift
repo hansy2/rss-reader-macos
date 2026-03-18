@@ -28,9 +28,33 @@ struct FeedSidebarView: View {
     }
 
     var body: some View {
-        List(selection: $selectedFeed) {
-            Section {
-                ForEach(filteredFeeds) { feed in
+        VStack(spacing: 0) {
+            // Inline-Suchfeld (kein .searchable(), da NavigationSplitView nur einen
+            // Search-Toolbar-Eintrag erlaubt – ArticleListView belegt diesen bereits)
+            HStack {
+                Image(systemName: "magnifyingglass")
+                    .foregroundStyle(.secondary)
+                    .font(.caption)
+                TextField("Feeds durchsuchen", text: $searchText)
+                    .textFieldStyle(.plain)
+                    .font(.subheadline)
+                if !searchText.isEmpty {
+                    Button(action: { searchText = "" }) {
+                        Image(systemName: "xmark.circle.fill")
+                            .foregroundStyle(.secondary)
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .padding(.horizontal, 10)
+            .padding(.vertical, 6)
+            .background(Color(nsColor: .controlBackgroundColor))
+
+            Divider()
+
+            List(selection: $selectedFeed) {
+                Section {
+                    ForEach(filteredFeeds) { feed in
                     FeedRowView(feed: feed)
                         .tag(feed)
                         .contextMenu {
@@ -69,9 +93,9 @@ struct FeedSidebarView: View {
                         .foregroundStyle(.secondary)
                 }
             }
+            }
+            .listStyle(.sidebar)
         }
-        .listStyle(.sidebar)
-        .searchable(text: $searchText, prompt: "Feeds durchsuchen")
         .toolbar {
             ToolbarItem {
                 Button(action: { showAddFeed.toggle() }) {
@@ -85,6 +109,7 @@ struct FeedSidebarView: View {
         }
     }
 }
+
 
 struct FeedRowView: View {
     let feed: Feed
