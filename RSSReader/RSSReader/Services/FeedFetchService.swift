@@ -2,6 +2,18 @@ import Foundation
 import SwiftData
 import FeedKit
 
+// Reiner Werttyp – vollständig Sendable, keine SwiftData-Abhängigkeit
+private struct ParsedItem: Sendable {
+    let guid: String
+    let title: String
+    let itemDescription: String?
+    let contentHTML: String?
+    let url: URL?
+    let imageURL: URL?
+    let author: String?
+    let publishedAt: Date?
+}
+
 @Observable
 final class FeedFetchService {
     var isFetching = false
@@ -16,27 +28,51 @@ final class FeedFetchService {
         let descriptor = FetchDescriptor<Feed>(predicate: #Predicate { $0.isEnabled })
         guard let feeds = try? modelContext.fetch(descriptor) else { return }
 
-        await withTaskGroup(of: (Feed, [FeedItem])?.self) { group in
-            for feed in feeds {
+        // Nur Sendable-Werte (PersistentIdentifier + URL) über Task-Grenzen schicken
+        let feedInfos: [(id: PersistentIdentifier, url: URL)] = feeds.map { ($0.persistentModelID, $0.url) }
+
+        let results: [(PersistentIdentifier, [ParsedItem])] = await withTaskGroup(
+            of: (PersistentIdentifier, [ParsedItem])?.self
+        ) { group in
+            for info in feedInfos {
                 group.addTask { [weak self] in
-                    guard let items = await self?.fetchFeed(feed) else { return nil }
-                    return (feed, items)
+                    guard let parsed = await self?.fetchAndParse(url: info.url) else { return nil }
+                    return (info.id, parsed)
                 }
             }
-
+            var collected: [(PersistentIdentifier, [ParsedItem])] = []
             for await result in group {
-                guard let (feed, newItems) = result else { continue }
-                for item in newItems {
-                    item.feed = feed
-                    modelContext.insert(item)
-                }
-                feed.lastFetchedAt = .now
+                if let r = result { collected.append(r) }
+            }
+            return collected
+        }
 
-                // Regeln prüfen
-                let ruleDescriptor = FetchDescriptor<Rule>(predicate: #Predicate { $0.isEnabled })
-                if let rules = try? modelContext.fetch(ruleDescriptor) {
-                    ruleEngine.evaluate(newItems: newItems, rules: rules)
-                }
+        // Zurück auf dem MainActor: SwiftData-Objekte erstellen
+        let ruleDescriptor = FetchDescriptor<Rule>(predicate: #Predicate { $0.isEnabled })
+        let rules = (try? modelContext.fetch(ruleDescriptor)) ?? []
+
+        for (feedID, parsedItems) in results {
+            guard let feed = modelContext.model(for: feedID) as? Feed else { continue }
+
+            let newItems: [FeedItem] = parsedItems.map { p in
+                let item = FeedItem(
+                    guid: p.guid,
+                    title: p.title,
+                    itemDescription: p.itemDescription,
+                    contentHTML: p.contentHTML,
+                    url: p.url,
+                    imageURL: p.imageURL,
+                    author: p.author,
+                    publishedAt: p.publishedAt
+                )
+                item.feed = feed
+                modelContext.insert(item)
+                return item
+            }
+            feed.lastFetchedAt = .now
+
+            if !newItems.isEmpty {
+                ruleEngine.evaluate(newItems: newItems, rules: rules)
             }
         }
 
@@ -46,8 +82,18 @@ final class FeedFetchService {
 
     @MainActor
     func fetchSingleFeed(_ feed: Feed, modelContext: ModelContext) async {
-        guard let newItems = await fetchFeed(feed) else { return }
-        for item in newItems {
+        guard let parsed = await fetchAndParse(url: feed.url) else { return }
+        for p in parsed {
+            let item = FeedItem(
+                guid: p.guid,
+                title: p.title,
+                itemDescription: p.itemDescription,
+                contentHTML: p.contentHTML,
+                url: p.url,
+                imageURL: p.imageURL,
+                author: p.author,
+                publishedAt: p.publishedAt
+            )
             item.feed = feed
             modelContext.insert(item)
         }
@@ -73,75 +119,54 @@ final class FeedFetchService {
         WidgetDataBridge.write(articles: widgetArticles)
     }
 
-    private func fetchFeed(_ feed: Feed) async -> [FeedItem]? {
-        guard let (data, _) = try? await URLSession.shared.data(from: feed.url) else {
-            return nil
-        }
-
-        let parser = FeedParser(data: data)
-        let result = parser.parse()
-
-        switch result {
-        case .success(let parsedFeed):
-            return mapToFeedItems(parsedFeed)
-        case .failure:
-            return nil
-        }
+    private func fetchAndParse(url: URL) async -> [ParsedItem]? {
+        guard let (data, _) = try? await URLSession.shared.data(from: url) else { return nil }
+        let result = FeedParser(data: data).parse()
+        guard case .success(let feed) = result else { return nil }
+        return mapToParsedItems(feed)
     }
 
-    private func mapToFeedItems(_ parsedFeed: FeedKit.Feed) -> [FeedItem] {
-        var items: [FeedItem] = []
-
-        switch parsedFeed {
-        case .rss(let rssFeed):
-            for rssItem in rssFeed.items ?? [] {
-                let guid = rssItem.guid?.value ?? rssItem.link ?? UUID().uuidString
-                let item = FeedItem(
-                    guid: guid,
-                    title: rssItem.title ?? "Ohne Titel",
-                    itemDescription: rssItem.description,
-                    contentHTML: rssItem.content?.contentEncoded,
-                    url: rssItem.link.flatMap(URL.init(string:)),
-                    imageURL: rssItem.enclosure?.attributes?.url.flatMap(URL.init(string:)),
-                    author: rssItem.author ?? rssItem.dublinCore?.dcCreator,
-                    publishedAt: rssItem.pubDate
+    private func mapToParsedItems(_ feed: FeedKit.Feed) -> [ParsedItem] {
+        switch feed {
+        case .rss(let rss):
+            return (rss.items ?? []).map { item in
+                ParsedItem(
+                    guid: item.guid?.value ?? item.link ?? UUID().uuidString,
+                    title: item.title ?? "Ohne Titel",
+                    itemDescription: item.description,
+                    contentHTML: item.content?.contentEncoded,
+                    url: item.link.flatMap(URL.init(string:)),
+                    imageURL: item.enclosure?.attributes?.url.flatMap(URL.init(string:)),
+                    author: item.author ?? item.dublinCore?.dcCreator,
+                    publishedAt: item.pubDate
                 )
-                items.append(item)
             }
-
-        case .atom(let atomFeed):
-            for entry in atomFeed.entries ?? [] {
-                let guid = entry.id ?? entry.links?.first?.attributes?.href ?? UUID().uuidString
-                let link = entry.links?.first?.attributes?.href
-                let item = FeedItem(
-                    guid: guid,
+        case .atom(let atom):
+            return (atom.entries ?? []).map { entry in
+                ParsedItem(
+                    guid: entry.id ?? entry.links?.first?.attributes?.href ?? UUID().uuidString,
                     title: entry.title ?? "Ohne Titel",
                     itemDescription: entry.summary?.value,
                     contentHTML: entry.content?.value,
-                    url: link.flatMap(URL.init(string:)),
+                    url: entry.links?.first?.attributes?.href.flatMap(URL.init(string:)),
+                    imageURL: nil,
                     author: entry.authors?.first?.name,
                     publishedAt: entry.published ?? entry.updated
                 )
-                items.append(item)
             }
-
-        case .json(let jsonFeed):
-            for jsonItem in jsonFeed.items ?? [] {
-                let guid = jsonItem.id ?? jsonItem.url ?? UUID().uuidString
-                let item = FeedItem(
-                    guid: guid,
-                    title: jsonItem.title ?? "Ohne Titel",
-                    itemDescription: jsonItem.summary,
-                    contentHTML: jsonItem.contentHtml,
-                    url: jsonItem.url.flatMap(URL.init(string:)),
-                    imageURL: jsonItem.image.flatMap(URL.init(string:)),
-                    author: jsonItem.author?.name,
-                    publishedAt: jsonItem.datePublished
+        case .json(let json):
+            return (json.items ?? []).map { item in
+                ParsedItem(
+                    guid: item.id ?? item.url ?? UUID().uuidString,
+                    title: item.title ?? "Ohne Titel",
+                    itemDescription: item.summary,
+                    contentHTML: item.contentHtml,
+                    url: item.url.flatMap(URL.init(string:)),
+                    imageURL: item.image.flatMap(URL.init(string:)),
+                    author: item.author?.name,
+                    publishedAt: item.datePublished
                 )
-                items.append(item)
             }
         }
-
-        return items
     }
 }
