@@ -12,7 +12,8 @@ let package = Package(
         .executableTarget(
             name: "RSSReader",
             dependencies: ["FeedKit"],
-            path: "RSSReader"
+            path: ".",
+            sources: ["RSSReader", "Shared"]
         ),
     ]
 )
