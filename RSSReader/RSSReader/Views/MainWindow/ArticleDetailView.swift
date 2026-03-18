@@ -4,6 +4,8 @@ import WebKit
 struct ArticleDetailView: View {
     let item: FeedItem?
 
+    @Environment(\.modelContext) private var modelContext
+
     var body: some View {
         if let item {
             VStack(spacing: 0) {
@@ -37,7 +39,7 @@ struct ArticleDetailView: View {
                     }
 
                     HStack(spacing: 12) {
-                        Button(action: { item.isStarred.toggle() }) {
+                        Button(action: { item.isStarred.toggle(); try? modelContext.save() }) {
                             Label(
                                 item.isStarred ? "Favorit entfernen" : "Als Favorit",
                                 systemImage: item.isStarred ? "star.fill" : "star"
@@ -45,7 +47,7 @@ struct ArticleDetailView: View {
                         }
                         .buttonStyle(.borderless)
 
-                        Button(action: { item.isRead.toggle() }) {
+                        Button(action: { item.isRead.toggle(); try? modelContext.save() }) {
                             Label(
                                 item.isRead ? "Ungelesen" : "Gelesen",
                                 systemImage: item.isRead ? "envelope" : "envelope.open"

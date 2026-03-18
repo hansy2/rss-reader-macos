@@ -5,6 +5,7 @@ import SwiftData
 
 struct RulesView: View {
     @Environment(\.modelContext) private var modelContext
+    @Environment(\.dismiss) private var dismiss
     @Query(sort: \Rule.createdAt) private var rules: [Rule]
 
     @State private var showAddRule = false
@@ -35,7 +36,10 @@ struct RulesView: View {
         }
         .navigationTitle("Regeln")
         .toolbar {
-            ToolbarItem {
+            ToolbarItem(placement: .cancellationAction) {
+                Button("Fertig") { dismiss() }
+            }
+            ToolbarItem(placement: .automatic) {
                 Button(action: { showAddRule = true }) {
                     Label("Regel hinzufügen", systemImage: "plus")
                 }

@@ -10,8 +10,10 @@ struct FeedSidebarView: View {
     @Query(sort: \Feed.title) private var allFeeds: [Feed]
 
     @State private var showAddFeed = false
-    @State private var newFeedURL = ""
     @State private var searchText = ""
+    @State private var renamingFeed: Feed?
+    @State private var renameText = ""
+    @State private var assigningFeed: Feed?
 
     private var filteredFeeds: [Feed] {
         var feeds = allFeeds
@@ -58,8 +60,12 @@ struct FeedSidebarView: View {
                     FeedRowView(feed: feed)
                         .tag(feed)
                         .contextMenu {
-                            Button("Bearbeiten") {
-                                // TODO: Feed bearbeiten
+                            Button("Umbenennen") {
+                                renamingFeed = feed
+                                renameText = feed.title
+                            }
+                            Button("Gruppe zuweisen…") {
+                                assigningFeed = feed
                             }
                             if feed.group != nil {
                                 Button("Aus Gruppe entfernen") {
@@ -107,6 +113,36 @@ struct FeedSidebarView: View {
         .sheet(isPresented: $showAddFeed) {
             AddFeedView(selectedGroup: selectedGroup)
         }
+        .sheet(item: $renamingFeed) { feed in
+            VStack(spacing: 16) {
+                Text("Feed umbenennen")
+                    .font(.headline)
+                TextField("Name", text: $renameText)
+                    .textFieldStyle(.roundedBorder)
+                    .onSubmit { saveFeedRename(feed) }
+                HStack {
+                    Button("Abbrechen") { renamingFeed = nil }
+                        .keyboardShortcut(.escape)
+                    Spacer()
+                    Button("Speichern") { saveFeedRename(feed) }
+                        .buttonStyle(.borderedProminent)
+                        .disabled(renameText.isEmpty)
+                        .keyboardShortcut(.return)
+                }
+            }
+            .padding()
+            .frame(width: 320)
+        }
+        .sheet(item: $assigningFeed) { feed in
+            AssignGroupView(feed: feed)
+        }
+    }
+
+    private func saveFeedRename(_ feed: Feed) {
+        guard !renameText.isEmpty else { return }
+        feed.title = renameText
+        try? modelContext.save()
+        renamingFeed = nil
     }
 }
 
