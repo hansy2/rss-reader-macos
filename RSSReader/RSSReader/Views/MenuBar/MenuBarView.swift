@@ -5,6 +5,7 @@ struct MenuBarView: View {
     @Environment(FeedFetchService.self) private var fetchService
     @Environment(RuleEngine.self) private var ruleEngine
     @Environment(\.modelContext) private var modelContext
+    @Environment(\.openWindow) private var openWindow
 
     @Query(sort: \FeedItem.publishedAt, order: .reverse) private var allItems: [FeedItem]
 
@@ -162,11 +163,8 @@ struct MenuBarView: View {
     }
 
     private func openMainWindow() {
+        openWindow(id: "main")
         NSApp.activate(ignoringOtherApps: true)
-        for window in NSApp.windows where window.canBecomeMain {
-            window.makeKeyAndOrderFront(nil)
-            break
-        }
     }
 }
 

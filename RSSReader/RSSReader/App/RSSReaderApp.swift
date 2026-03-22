@@ -23,7 +23,7 @@ struct RSSReaderApp: App {
     }
 
     var body: some Scene {
-        WindowGroup("RSSReader") {
+        WindowGroup("RSSReader", id: "main") {
             ContentView()
                 .environment(fetchService)
                 .environment(ruleEngine)
