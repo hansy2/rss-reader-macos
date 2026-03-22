@@ -1,64 +1,144 @@
 import SwiftUI
 import SwiftData
 
-// MARK: - Rules List
+// MARK: - Rules Main View
 
 struct RulesView: View {
     @Environment(\.modelContext) private var modelContext
-    @Environment(\.dismiss) private var dismiss
     @Query(sort: \Rule.createdAt) private var rules: [Rule]
 
-    @State private var showAddRule = false
-    @State private var editingRule: Rule?
+    @State private var selectedRule: Rule?
+    @State private var isAdding = false
 
     var body: some View {
-        Group {
-            if rules.isEmpty {
-                ContentUnavailableView {
-                    Label("Keine Regeln", systemImage: "slider.horizontal.3")
-                } description: {
-                    Text("Erstelle Regeln, um automatisch auf neue Artikel zu reagieren.")
-                } actions: {
-                    Button("Erste Regel erstellen") { showAddRule = true }
-                        .buttonStyle(.borderedProminent)
+        NavigationSplitView {
+            // Linke Spalte: Regelliste
+            ruleList
+                .navigationSplitViewColumnWidth(min: 200, ideal: 230, max: 280)
+        } detail: {
+            // Rechte Spalte: Bearbeitung / Leer
+            Group {
+                if isAdding {
+                    RuleEditView(rule: nil, onSave: { newRule in
+                        selectedRule = newRule
+                        isAdding = false
+                    }, onCancel: {
+                        isAdding = false
+                    })
+                } else if let rule = selectedRule {
+                    RuleEditView(rule: rule, onSave: { _ in }, onCancel: {
+                        selectedRule = nil
+                    })
+                    .id(rule.id)
+                } else {
+                    noSelectionView
                 }
+            }
+            .frame(minWidth: 400)
+        }
+        .navigationSplitViewStyle(.balanced)
+        .frame(minWidth: 660, minHeight: 480)
+    }
+
+    // MARK: Regelliste
+
+    private var ruleList: some View {
+        VStack(spacing: 0) {
+            // Header
+            HStack {
+                Text("Regeln")
+                    .font(.headline)
+                Spacer()
+                Button(action: addRule) {
+                    Image(systemName: "plus")
+                }
+                .buttonStyle(.borderless)
+                .help("Neue Regel")
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 10)
+
+            Divider()
+
+            if rules.isEmpty {
+                VStack(spacing: 12) {
+                    Spacer()
+                    Image(systemName: "slider.horizontal.3")
+                        .font(.system(size: 32))
+                        .foregroundStyle(.tertiary)
+                    Text("Keine Regeln")
+                        .font(.headline)
+                        .foregroundStyle(.secondary)
+                    Text("Klicke auf + um eine\nRegel zu erstellen.")
+                        .font(.caption)
+                        .foregroundStyle(.tertiary)
+                        .multilineTextAlignment(.center)
+                    Spacer()
+                }
+                .frame(maxWidth: .infinity)
             } else {
-                List {
+                List(selection: $selectedRule) {
                     ForEach(rules) { rule in
                         RuleRowView(rule: rule)
-                            .contentShape(Rectangle())
-                            .onTapGesture { editingRule = rule }
+                            .tag(rule)
                     }
                     .onDelete(perform: deleteRules)
                 }
-                .listStyle(.inset)
+                .listStyle(.sidebar)
             }
-        }
-        .navigationTitle("Regeln")
-        .toolbar {
-            ToolbarItem(placement: .cancellationAction) {
-                Button("Fertig") { dismiss() }
-            }
-            ToolbarItem(placement: .automatic) {
-                Button(action: { showAddRule = true }) {
-                    Label("Regel hinzufügen", systemImage: "plus")
+
+            Divider()
+
+            // Footer mit Delete-Button
+            HStack {
+                Button(action: deleteSelected) {
+                    Image(systemName: "minus")
                 }
+                .buttonStyle(.borderless)
+                .disabled(selectedRule == nil)
+                .help("Ausgewählte Regel löschen")
+                Spacer()
             }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
         }
-        .sheet(isPresented: $showAddRule) {
-            NavigationStack {
-                RuleEditView(rule: nil)
-            }
+        .background(Color(nsColor: .controlBackgroundColor))
+    }
+
+    private var noSelectionView: some View {
+        VStack(spacing: 12) {
+            Image(systemName: "slider.horizontal.3")
+                .font(.system(size: 48))
+                .foregroundStyle(.tertiary)
+            Text("Keine Regel ausgewählt")
+                .font(.title3)
+                .foregroundStyle(.secondary)
+            Text("Wähle links eine Regel aus oder\nerstelle eine neue mit +")
+                .font(.subheadline)
+                .foregroundStyle(.tertiary)
+                .multilineTextAlignment(.center)
+            Button("Neue Regel") { addRule() }
+                .buttonStyle(.borderedProminent)
+                .padding(.top, 4)
         }
-        .sheet(item: $editingRule) { rule in
-            NavigationStack {
-                RuleEditView(rule: rule)
-            }
-        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    private func addRule() {
+        selectedRule = nil
+        isAdding = true
+    }
+
+    private func deleteSelected() {
+        guard let rule = selectedRule else { return }
+        selectedRule = nil
+        modelContext.delete(rule)
+        try? modelContext.save()
     }
 
     private func deleteRules(at offsets: IndexSet) {
         for index in offsets {
+            if selectedRule?.id == rules[index].id { selectedRule = nil }
             modelContext.delete(rules[index])
         }
         try? modelContext.save()
@@ -71,42 +151,56 @@ struct RuleRowView: View {
     @Bindable var rule: Rule
 
     var body: some View {
-        HStack(spacing: 12) {
-            VStack(alignment: .leading, spacing: 3) {
+        HStack(spacing: 10) {
+            // Farb-Icon je nach Aktion
+            Image(systemName: rule.actionType.iconName)
+                .foregroundStyle(.white)
+                .font(.caption)
+                .frame(width: 24, height: 24)
+                .background(rule.actionType.color)
+                .clipShape(RoundedRectangle(cornerRadius: 6))
+
+            VStack(alignment: .leading, spacing: 2) {
                 Text(rule.name)
                     .fontWeight(.medium)
                     .lineLimit(1)
+                    .foregroundStyle(rule.isEnabled ? .primary : .secondary)
+
                 HStack(spacing: 4) {
                     Text(rule.conditionType.rawValue)
-                        .font(.caption)
+                        .font(.caption2)
                         .foregroundStyle(.secondary)
                     Image(systemName: "arrow.right")
-                        .font(.caption2)
+                        .font(.system(size: 8))
                         .foregroundStyle(.tertiary)
                     Text(rule.actionType.rawValue)
-                        .font(.caption)
+                        .font(.caption2)
                         .foregroundStyle(.secondary)
                 }
             }
+
             Spacer()
-            Toggle("Aktiv", isOn: $rule.isEnabled)
+
+            Toggle("", isOn: $rule.isEnabled)
                 .labelsHidden()
+                .scaleEffect(0.8)
                 .onChange(of: rule.isEnabled) { _, _ in
                     try? rule.modelContext?.save()
                 }
         }
-        .padding(.vertical, 4)
+        .padding(.vertical, 2)
+        .opacity(rule.isEnabled ? 1 : 0.6)
     }
 }
 
-// MARK: - Rule Edit
+// MARK: - Rule Edit View (inline, kein Sheet)
 
 struct RuleEditView: View {
     let rule: Rule?
+    let onSave: (Rule) -> Void
+    let onCancel: () -> Void
 
     @Environment(\.modelContext) private var modelContext
-    @Environment(\.dismiss) private var dismiss
-
     @Query(sort: \Feed.title) private var feeds: [Feed]
 
     @State private var name = ""
@@ -119,74 +213,174 @@ struct RuleEditView: View {
     @State private var scopeFeedURL: String? = nil
 
     private var isEditing: Bool { rule != nil }
-    private var canSave: Bool { !name.isEmpty && (conditionType == .anyNewArticle || !conditionValue.isEmpty) }
+    private var canSave: Bool {
+        !name.trimmingCharacters(in: .whitespaces).isEmpty &&
+        (conditionType == .anyNewArticle || !conditionValue.isEmpty)
+    }
 
     var body: some View {
-        Form {
-            Section("Allgemein") {
-                TextField("Name der Regel", text: $name)
-                Toggle("Aktiv", isOn: $isEnabled)
-            }
+        ScrollView {
+            VStack(alignment: .leading, spacing: 20) {
 
-            Section("Bedingung") {
-                Picker("Typ", selection: $conditionType) {
-                    ForEach(RuleConditionType.allCases, id: \.self) { type in
-                        Text(type.rawValue).tag(type)
-                    }
+                // Header
+                HStack {
+                    Text(isEditing ? "Regel bearbeiten" : "Neue Regel")
+                        .font(.title2)
+                        .fontWeight(.semibold)
+                    Spacer()
+                    Toggle("Aktiv", isOn: $isEnabled)
+                        .toggleStyle(.switch)
                 }
 
-                if conditionType != .anyNewArticle {
-                    if conditionType == .contentContains {
-                        Picker("Feld", selection: $conditionField) {
-                            ForEach(RuleConditionField.allCases, id: \.self) { field in
-                                Text(field.rawValue).tag(field)
+                Divider()
+
+                // Allgemein
+                formSection(title: "Name", icon: "tag") {
+                    TextField("z.B. Breaking News benachrichtigen", text: $name)
+                        .textFieldStyle(.roundedBorder)
+                }
+
+                Divider()
+
+                // Bedingung
+                formSection(title: "Bedingung", icon: "text.magnifyingglass") {
+                    VStack(alignment: .leading, spacing: 10) {
+                        Picker("Typ", selection: $conditionType) {
+                            ForEach(RuleConditionType.allCases, id: \.self) {
+                                Text($0.rawValue).tag($0)
+                            }
+                        }
+                        .pickerStyle(.menu)
+                        .labelsHidden()
+                        .frame(maxWidth: .infinity, alignment: .leading)
+
+                        if conditionType != .anyNewArticle {
+                            if conditionType == .contentContains {
+                                Picker("Feld", selection: $conditionField) {
+                                    ForEach(RuleConditionField.allCases, id: \.self) {
+                                        Text($0.rawValue).tag($0)
+                                    }
+                                }
+                                .pickerStyle(.segmented)
+                            }
+
+                            TextField(
+                                conditionType == .titleMatches ? "Regulärer Ausdruck" : "Suchwert",
+                                text: $conditionValue
+                            )
+                            .textFieldStyle(.roundedBorder)
+                            .font(.system(.body, design: conditionType == .titleMatches ? .monospaced : .default))
+                        }
+
+                        // Feed-Einschränkung
+                        if !feeds.isEmpty {
+                            HStack {
+                                Image(systemName: "dot.radiowaves.up.forward")
+                                    .foregroundStyle(.secondary)
+                                    .font(.caption)
+                                Picker("Feed", selection: $scopeFeedURL) {
+                                    Text("Alle Feeds").tag(nil as String?)
+                                    ForEach(feeds) { feed in
+                                        Text(feed.title).tag(feed.url.absoluteString as String?)
+                                    }
+                                }
+                                .pickerStyle(.menu)
                             }
                         }
                     }
-                    TextField("Suchwert", text: $conditionValue)
                 }
 
-                Picker("Feed einschränken", selection: $scopeFeedURL) {
-                    Text("Alle Feeds").tag(nil as String?)
-                    ForEach(feeds) { feed in
-                        Text(feed.title).tag(feed.url.absoluteString as String?)
+                Divider()
+
+                // Aktion
+                formSection(title: "Aktion", icon: "bolt") {
+                    VStack(alignment: .leading, spacing: 10) {
+                        // Aktion-Buttons
+                        LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 8) {
+                            ForEach(RuleActionType.allCases, id: \.self) { type in
+                                actionButton(type: type)
+                            }
+                        }
+
+                        // Payload
+                        switch actionType {
+                        case .notification:
+                            TextField("Nachrichtentext (leer = Artikeltitel)", text: $actionPayload)
+                                .textFieldStyle(.roundedBorder)
+                        case .playSound:
+                            Picker("Sound", selection: $actionPayload) {
+                                ForEach(["Basso", "Blow", "Bottle", "Frog", "Funk", "Glass", "Hero", "Morse", "Ping", "Pop", "Purr", "Sosumi", "Submarine", "Tink"], id: \.self) {
+                                    Text($0).tag($0)
+                                }
+                            }
+                            .pickerStyle(.menu)
+                        case .runShortcut:
+                            TextField("Name des Kurzbefehls", text: $actionPayload)
+                                .textFieldStyle(.roundedBorder)
+                        case .markAsStarred:
+                            EmptyView()
+                        }
                     }
                 }
-            }
 
-            Section("Aktion") {
-                Picker("Typ", selection: $actionType) {
-                    ForEach(RuleActionType.allCases, id: \.self) { type in
-                        Text(type.rawValue).tag(type)
+                Spacer(minLength: 20)
+
+                // Buttons
+                HStack {
+                    if isEditing {
+                        Button("Abbrechen", role: .cancel) { onCancel() }
+                            .buttonStyle(.bordered)
                     }
-                }
-
-                switch actionType {
-                case .notification:
-                    TextField("Benachrichtigungstext (leer = Artikeltitel)", text: $actionPayload)
-                case .playSound:
-                    TextField("Soundname (z.B. Basso, Ping, Pop)", text: $actionPayload)
-                case .runShortcut:
-                    TextField("Name des Kurzbefehls", text: $actionPayload)
-                case .markAsStarred:
-                    EmptyView()
+                    Spacer()
+                    Button(isEditing ? "Speichern" : "Regel erstellen") { save() }
+                        .buttonStyle(.borderedProminent)
+                        .disabled(!canSave)
                 }
             }
+            .padding(24)
         }
-        .formStyle(.grouped)
-        .navigationTitle(isEditing ? "Regel bearbeiten" : "Neue Regel")
-        .toolbar {
-            ToolbarItem(placement: .cancellationAction) {
-                Button("Abbrechen") { dismiss() }
-            }
-            ToolbarItem(placement: .confirmationAction) {
-                Button("Speichern") { save() }
-                    .disabled(!canSave)
-            }
-        }
-        .frame(minWidth: 420, minHeight: 460)
+        .background(Color(nsColor: .windowBackgroundColor))
         .onAppear { loadFromRule() }
     }
+
+    // MARK: Hilfs-Views
+
+    private func formSection<Content: View>(title: String, icon: String, @ViewBuilder content: () -> Content) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Label(title, systemImage: icon)
+                .font(.headline)
+                .foregroundStyle(.primary)
+            content()
+        }
+    }
+
+    private func actionButton(type: RuleActionType) -> some View {
+        Button(action: { actionType = type }) {
+            HStack(spacing: 8) {
+                Image(systemName: type.iconName)
+                    .foregroundStyle(actionType == type ? .white : type.color)
+                    .font(.callout)
+                Text(type.rawValue)
+                    .font(.callout)
+                    .lineLimit(1)
+                Spacer()
+            }
+            .padding(.horizontal, 10)
+            .padding(.vertical, 8)
+            .background(
+                RoundedRectangle(cornerRadius: 8)
+                    .fill(actionType == type ? type.color : Color(nsColor: .controlBackgroundColor))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 8)
+                    .stroke(actionType == type ? type.color : Color(nsColor: .separatorColor), lineWidth: 1)
+            )
+            .foregroundStyle(actionType == type ? .white : .primary)
+        }
+        .buttonStyle(.plain)
+    }
+
+    // MARK: Logik
 
     private func loadFromRule() {
         guard let rule else { return }
@@ -212,6 +406,8 @@ struct RuleEditView: View {
             rule.actionType = actionType
             rule.actionPayload = payload.isEmpty ? nil : payload
             rule.scopeFeedURL = scopeFeedURL
+            try? modelContext.save()
+            onSave(rule)
         } else {
             let newRule = Rule(
                 name: name,
@@ -224,9 +420,30 @@ struct RuleEditView: View {
                 scopeFeedURL: scopeFeedURL
             )
             modelContext.insert(newRule)
+            try? modelContext.save()
+            onSave(newRule)
         }
+    }
+}
 
-        try? modelContext.save()
-        dismiss()
+// MARK: - Extensions für Icons & Farben
+
+extension RuleActionType {
+    var iconName: String {
+        switch self {
+        case .notification:   return "bell.fill"
+        case .markAsStarred:  return "star.fill"
+        case .playSound:      return "speaker.wave.2.fill"
+        case .runShortcut:    return "arrow.trianglehead.2.clockwise.rotate.90"
+        }
+    }
+
+    var color: Color {
+        switch self {
+        case .notification:   return .blue
+        case .markAsStarred:  return .orange
+        case .playSound:      return .purple
+        case .runShortcut:    return .green
+        }
     }
 }

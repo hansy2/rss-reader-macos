@@ -31,50 +31,46 @@ struct GroupSidebarView: View {
             Divider()
 
             // Gruppenliste (scrollbar)
-            ScrollView {
-                LazyVStack(spacing: 2) {
-                    // "Alle Feeds" Eintrag
+            List {
+                // "Alle Feeds" Eintrag
+                GroupRow(
+                    name: "Alle Feeds",
+                    icon: "tray.2",
+                    isSelected: showAllFeeds,
+                    feedCount: nil
+                )
+                .onTapGesture {
+                    showAllFeeds = true
+                    selectedGroup = nil
+                }
+                .listRowSeparator(.hidden)
+
+                // Einzelne Gruppen
+                ForEach(groups) { group in
                     GroupRow(
-                        name: "Alle Feeds",
-                        icon: "tray.2",
-                        isSelected: showAllFeeds,
-                        feedCount: nil
+                        name: group.name,
+                        icon: group.iconName,
+                        isSelected: !showAllFeeds && selectedGroup?.id == group.id,
+                        feedCount: group.feeds.count
                     )
                     .onTapGesture {
-                        showAllFeeds = true
-                        selectedGroup = nil
+                        showAllFeeds = false
+                        selectedGroup = group
                     }
-
-                    Divider()
-                        .padding(.vertical, 4)
-
-                    // Einzelne Gruppen
-                    ForEach(groups) { group in
-                        GroupRow(
-                            name: group.name,
-                            icon: group.iconName,
-                            isSelected: !showAllFeeds && selectedGroup?.id == group.id,
-                            feedCount: group.feeds.count
-                        )
-                        .onTapGesture {
-                            showAllFeeds = false
-                            selectedGroup = group
+                    .contextMenu {
+                        Button("Umbenennen") {
+                            editingGroup = group
+                            editName = group.name
                         }
-                        .contextMenu {
-                            Button("Umbenennen") {
-                                editingGroup = group
-                                editName = group.name
-                            }
-                            Button("Löschen", role: .destructive) {
-                                deleteGroup(group)
-                            }
+                        Button("Löschen", role: .destructive) {
+                            deleteGroup(group)
                         }
                     }
-                    .onMove(perform: moveGroups)
+                    .listRowSeparator(.hidden)
                 }
-                .padding(.horizontal, 8)
-                .padding(.top, 4)
+                .onMove(perform: moveGroups)
             }
+            .listStyle(.sidebar)
 
             Divider()
 

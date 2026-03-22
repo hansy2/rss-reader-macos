@@ -189,8 +189,15 @@ struct WidgetHeader: View {
 struct ArticleRowView: View {
     let article: WidgetArticle
 
+    private var destination: URL {
+        var components = URLComponents()
+        components.scheme = "rssreader"
+        components.host = "article"
+        components.queryItems = [URLQueryItem(name: "id", value: article.id)]
+        return components.url ?? URL(string: "rssreader://open")!
+    }
+
     var body: some View {
-        let destination = article.url ?? URL(string: "rssreader://open")!
         Link(destination: destination) {
             VStack(alignment: .leading, spacing: 2) {
                 Text(article.title)

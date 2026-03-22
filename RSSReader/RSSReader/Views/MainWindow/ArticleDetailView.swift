@@ -118,7 +118,7 @@ struct WebContentView: NSViewRepresentable {
                 line-height: 1.6;
                 padding: 16px;
                 margin: 0;
-                color: -apple-system-label;
+                color: inherit;
                 max-width: 100%;
                 word-wrap: break-word;
             }

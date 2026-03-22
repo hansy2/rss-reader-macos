@@ -101,6 +101,14 @@ struct AddFeedView: View {
                     case .json(let json): title = json.title ?? url.host ?? "Unbekannter Feed"
                     }
 
+                    let urlString = url.absoluteString
+                    let descriptor = FetchDescriptor<Feed>(predicate: #Predicate { $0.url.absoluteString == urlString })
+                    if let existing = try? modelContext.fetch(descriptor), !existing.isEmpty {
+                        errorMessage = "Dieser Feed ist bereits vorhanden."
+                        isLoading = false
+                        return
+                    }
+
                     let feed = Feed(title: title, url: url)
                     if let groupID = selectedGroupID,
                        let group = groups.first(where: { $0.id == groupID }) {

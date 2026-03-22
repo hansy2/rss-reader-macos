@@ -24,8 +24,17 @@
     <string>Copyright © 2026. All rights reserved.</string>
     <key>NSPrincipalClass</key>
     <string>NSApplication</string>
-    <key>LSUIElement</key>
-    <true/>
+    <key>CFBundleURLTypes</key>
+    <array>
+        <dict>
+            <key>CFBundleURLName</key>
+            <string>com.rssreader.app</string>
+            <key>CFBundleURLSchemes</key>
+            <array>
+                <string>rssreader</string>
+            </array>
+        </dict>
+    </array>
     <key>AppIdentifierPrefix</key>
     <string>$(AppIdentifierPrefix)</string>
 </dict>

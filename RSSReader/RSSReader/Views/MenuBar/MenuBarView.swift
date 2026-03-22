@@ -136,6 +136,7 @@ private struct MenuBarArticleRow: View {
 
     private func openArticle() {
         item.isRead = true
+        try? item.modelContext?.save()
         if let url = item.url {
             NSWorkspace.shared.open(url)
         }

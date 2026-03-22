@@ -108,6 +108,19 @@ struct ArticleListView: View {
     }
 }
 
+extension String {
+    var strippedHTML: String {
+        self.replacingOccurrences(of: "<[^>]+>", with: "", options: .regularExpression)
+            .replacingOccurrences(of: "&amp;", with: "&")
+            .replacingOccurrences(of: "&lt;", with: "<")
+            .replacingOccurrences(of: "&gt;", with: ">")
+            .replacingOccurrences(of: "&quot;", with: "\"")
+            .replacingOccurrences(of: "&#39;", with: "'")
+            .replacingOccurrences(of: "&nbsp;", with: " ")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+}
+
 struct ArticleRowView: View {
     let item: FeedItem
 
@@ -151,7 +164,7 @@ struct ArticleRowView: View {
             }
 
             if let description = item.itemDescription {
-                Text(description.replacingOccurrences(of: "<[^>]+>", with: "", options: .regularExpression))
+                Text(description.strippedHTML)
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .lineLimit(2)

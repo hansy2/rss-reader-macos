@@ -54,7 +54,13 @@ final class FeedFetchService {
         for (feedID, parsedItems) in results {
             guard let feed = modelContext.model(for: feedID) as? Feed else { continue }
 
-            let newItems: [FeedItem] = parsedItems.map { p in
+            var newItems: [FeedItem] = []
+            for p in parsedItems {
+                let guid = p.guid
+                let existingDescriptor = FetchDescriptor<FeedItem>(predicate: #Predicate { $0.guid == guid })
+                if let existing = try? modelContext.fetch(existingDescriptor), !existing.isEmpty {
+                    continue // preserve existing isRead/isStarred
+                }
                 let item = FeedItem(
                     guid: p.guid,
                     title: p.title,
@@ -67,7 +73,7 @@ final class FeedFetchService {
                 )
                 item.feed = feed
                 modelContext.insert(item)
-                return item
+                newItems.append(item)
             }
             feed.lastFetchedAt = .now
 
@@ -81,9 +87,17 @@ final class FeedFetchService {
     }
 
     @MainActor
-    func fetchSingleFeed(_ feed: Feed, modelContext: ModelContext) async {
+    func fetchSingleFeed(_ feed: Feed, modelContext: ModelContext, ruleEngine: RuleEngine? = nil) async {
         guard let parsed = await fetchAndParse(url: feed.url) else { return }
+        let ruleDescriptor = FetchDescriptor<Rule>(predicate: #Predicate { $0.isEnabled })
+        let rules = (try? modelContext.fetch(ruleDescriptor)) ?? []
+        var newItems: [FeedItem] = []
         for p in parsed {
+            let guid = p.guid
+            let existingDescriptor = FetchDescriptor<FeedItem>(predicate: #Predicate { $0.guid == guid })
+            if let existing = try? modelContext.fetch(existingDescriptor), !existing.isEmpty {
+                continue // preserve existing isRead/isStarred
+            }
             let item = FeedItem(
                 guid: p.guid,
                 title: p.title,
@@ -96,8 +110,12 @@ final class FeedFetchService {
             )
             item.feed = feed
             modelContext.insert(item)
+            newItems.append(item)
         }
         feed.lastFetchedAt = .now
+        if !newItems.isEmpty, let ruleEngine {
+            ruleEngine.evaluate(newItems: newItems, rules: rules)
+        }
         try? modelContext.save()
     }
 
@@ -120,9 +138,15 @@ final class FeedFetchService {
     }
 
     private func fetchAndParse(url: URL) async -> [ParsedItem]? {
-        guard let (data, _) = try? await URLSession.shared.data(from: url) else { return nil }
+        guard let (data, _) = try? await URLSession.shared.data(from: url) else {
+            await MainActor.run { lastError = "Netzwerkfehler beim Laden von \(url.host ?? url.absoluteString)" }
+            return nil
+        }
         let result = FeedParser(data: data).parse()
-        guard case .success(let feed) = result else { return nil }
+        guard case .success(let feed) = result else {
+            await MainActor.run { lastError = "Feed konnte nicht geparst werden: \(url.host ?? url.absoluteString)" }
+            return nil
+        }
         return mapToParsedItems(feed)
     }
 

@@ -10,7 +10,6 @@ struct SettingsView: View {
             Section {
                 Picker("Intervall", selection: $manager.refreshIntervalMinutes) {
                     Text("Manuell").tag(0)
-                    Divider()
                     Text("5 Minuten").tag(5)
                     Text("15 Minuten").tag(15)
                     Text("30 Minuten").tag(30)
