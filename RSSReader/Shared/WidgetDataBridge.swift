@@ -19,12 +19,11 @@ public struct WidgetArticle: Codable, Identifiable, Sendable {
 }
 
 public enum WidgetDataBridge {
-    /// Gemeinsame JSON-Datei in ~/Library/Application Support/RSSReader/widget.json
+    /// Gemeinsame JSON-Datei im App-Group-Container (shared zwischen App und Widget)
     private static var sharedFileURL: URL {
-        let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
-        let dir = appSupport.appending(path: "RSSReader", directoryHint: .isDirectory)
-        try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
-        return dir.appending(path: "widget.json")
+        let container = AppGroupConfig.containerURL
+        try? FileManager.default.createDirectory(at: container, withIntermediateDirectories: true)
+        return container.appending(path: "widget.json")
     }
 
     /// Schreibt die neuesten Artikel als JSON-Datei und aktualisiert das Widget.
