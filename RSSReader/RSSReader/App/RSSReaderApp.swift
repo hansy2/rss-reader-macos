@@ -1,6 +1,7 @@
 import SwiftUI
 import SwiftData
 import UniformTypeIdentifiers
+import WidgetKit
 
 @main
 struct RSSReaderApp: App {
@@ -35,6 +36,8 @@ struct RSSReaderApp: App {
                         ruleEngine: ruleEngine,
                         modelContext: modelContainer.mainContext
                     )
+                    // Widget sofort mit gespeicherten Daten aktualisieren
+                    WidgetCenter.shared.reloadAllTimelines()
                 }
                 .onOpenURL { url in
                     handleDeepLink(url)

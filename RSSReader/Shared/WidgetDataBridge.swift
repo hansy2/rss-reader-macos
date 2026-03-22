@@ -30,8 +30,7 @@ public enum WidgetDataBridge {
     public static func write(articles: [WidgetArticle]) {
         guard let data = try? JSONEncoder().encode(articles) else { return }
         try? data.write(to: sharedFileURL, options: .atomic)
-        guard Bundle.main.bundleIdentifier != nil else { return }
-        WidgetCenter.shared.reloadAllTimelines()
+        WidgetCenter.shared.reloadTimelines(ofKind: "RSSReaderWidget")
     }
 
     /// Liest die gespeicherten Artikel aus der JSON-Datei.

@@ -2,13 +2,13 @@
 
 Ein nativer macOS RSS-Reader mit unbegrenzten Feeds, Gruppen-Organisation, Smart Folders, Lesemodus, Feed-Entdeckung, Menüleisten-Integration, Widget und Regelautomatisierung.
 
-![macOS 14+](https://img.shields.io/badge/macOS-14%2B-blue) ![Swift](https://img.shields.io/badge/Swift-5.10-orange) ![SwiftUI](https://img.shields.io/badge/SwiftUI-%E2%9C%93-brightgreen) ![Version](https://img.shields.io/badge/Version-1.0.3-green)
+![macOS 14+](https://img.shields.io/badge/macOS-14%2B-blue) ![Swift](https://img.shields.io/badge/Swift-5.10-orange) ![SwiftUI](https://img.shields.io/badge/SwiftUI-%E2%9C%93-brightgreen) ![Version](https://img.shields.io/badge/Version-1.0.4-green)
 
 ---
 
 ## Download
 
-**[→ Neueste Version herunterladen (v1.0.3)](https://github.com/hansy2/rss-reader-macos/releases/latest)**
+**[→ Neueste Version herunterladen (v1.0.4)](https://github.com/hansy2/rss-reader-macos/releases/latest)**
 
 DMG öffnen → App in Programme ziehen → fertig. Vollständig notarisiert, keine Sicherheitswarnung.
 
