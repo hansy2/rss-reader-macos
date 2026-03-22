@@ -9,6 +9,7 @@ struct ContentView: View {
     @State private var selectedGroup: FeedGroup?
     @State private var selectedFeed: Feed?
     @State private var selectedItem: FeedItem?
+    @State private var selectedSmartFolder: SmartFolder?
     @State private var showAllFeeds = true
     @Environment(\.openWindow) private var openWindow
     @State private var router = AppRouter.shared
@@ -28,7 +29,8 @@ struct ContentView: View {
             } content: {
                 ArticleListView(
                     selectedItem: $selectedItem,
-                    feed: selectedFeed
+                    feed: selectedSmartFolder == nil ? selectedFeed : nil,
+                    smartFolder: selectedSmartFolder
                 )
                 .navigationSplitViewColumnWidth(min: 250, ideal: 320, max: 500)
             } detail: {
@@ -40,7 +42,8 @@ struct ContentView: View {
             // Rechte Seite: Gruppen-Sidebar (immer sichtbar)
             GroupSidebarView(
                 selectedGroup: $selectedGroup,
-                showAllFeeds: $showAllFeeds
+                showAllFeeds: $showAllFeeds,
+                selectedSmartFolder: $selectedSmartFolder
             )
             .frame(minWidth: 160, idealWidth: 200, maxWidth: 300)
         }
@@ -65,31 +68,32 @@ struct ContentView: View {
                 .help("Regeln verwalten")
             }
         }
-        // Wenn App bereits läuft und URL reinkommt
         .onChange(of: router.pendingArticleGUID) { _, guid in
             guard let guid else { return }
             navigateToArticle(guid: guid)
         }
-        // Wenn App kalt gestartet wird (Items noch nicht geladen beim ersten onOpenURL)
         .onChange(of: allItems) { _, _ in
             guard let guid = router.pendingArticleGUID else { return }
             navigateToArticle(guid: guid)
         }
         .onAppear {
-            // Fallback: Falls GUID schon gesetzt war bevor View erschien
             if let guid = router.pendingArticleGUID {
                 navigateToArticle(guid: guid)
             }
         }
+        // Smart Folder ausgewählt → Feed-Auswahl aufheben
+        .onChange(of: selectedSmartFolder) { _, sf in
+            if sf != nil { selectedFeed = nil }
+        }
     }
 
     private func navigateToArticle(guid: String) {
-        // URLComponents already decoded the guid, so direct match is sufficient
         if let item = allItems.first(where: { $0.guid == guid }) {
             selectedFeed = item.feed
             selectedItem = item
             showAllFeeds = true
             selectedGroup = nil
+            selectedSmartFolder = nil
             router.pendingArticleGUID = nil
         }
     }

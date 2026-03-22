@@ -75,10 +75,14 @@ struct FeedSidebarView: View {
                             }
                             Divider()
                             Button("Alle als gelesen markieren") {
-                                for item in feed.items {
-                                    item.isRead = true
-                                }
+                                for item in feed.items { item.isRead = true }
                                 try? modelContext.save()
+                            }
+                            Toggle(isOn: Binding(
+                                get: { feed.fullTextEnabled },
+                                set: { feed.fullTextEnabled = $0; try? modelContext.save() }
+                            )) {
+                                Label("Volltext laden", systemImage: "doc.text.magnifyingglass")
                             }
                             Divider()
                             Button("Löschen", role: .destructive) {

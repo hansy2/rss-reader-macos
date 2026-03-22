@@ -5,6 +5,9 @@ struct ArticleDetailView: View {
     let item: FeedItem?
 
     @Environment(\.modelContext) private var modelContext
+    @State private var readingSettings = ReadingSettings.shared
+    @State private var fullTextHTML: String?
+    @State private var isLoadingFullText = false
 
     var body: some View {
         if let item {
@@ -22,15 +25,12 @@ struct ArticleDetailView: View {
                                 .font(.subheadline)
                                 .foregroundStyle(.secondary)
                         }
-
                         if let feedTitle = item.feed?.title {
                             Label(feedTitle, systemImage: "dot.radiowaves.up.forward")
                                 .font(.subheadline)
                                 .foregroundStyle(.secondary)
                         }
-
                         Spacer()
-
                         if let date = item.publishedAt {
                             Text(date, style: .date)
                                 .font(.subheadline)
@@ -39,6 +39,7 @@ struct ArticleDetailView: View {
                     }
 
                     HStack(spacing: 12) {
+                        // Stern
                         Button(action: { item.isStarred.toggle(); try? modelContext.save() }) {
                             Label(
                                 item.isStarred ? "Favorit entfernen" : "Als Favorit",
@@ -47,6 +48,7 @@ struct ArticleDetailView: View {
                         }
                         .buttonStyle(.borderless)
 
+                        // Gelesen
                         Button(action: { item.isRead.toggle(); try? modelContext.save() }) {
                             Label(
                                 item.isRead ? "Ungelesen" : "Gelesen",
@@ -56,16 +58,69 @@ struct ArticleDetailView: View {
                         .buttonStyle(.borderless)
 
                         if let url = item.url {
+                            // Browser
                             Button(action: { NSWorkspace.shared.open(url) }) {
                                 Label("Im Browser öffnen", systemImage: "safari")
                             }
                             .buttonStyle(.borderless)
 
-                            ShareLink(item: url) {
+                            // Teilen
+                            ShareLink(
+                                item: url,
+                                subject: Text(item.title),
+                                message: Text(item.title)
+                            ) {
                                 Label("Teilen", systemImage: "square.and.arrow.up")
                             }
                             .buttonStyle(.borderless)
                         }
+
+                        Spacer()
+
+                        // Volltext laden (falls aktiviert)
+                        if item.feed?.fullTextEnabled == true, let url = item.url {
+                            if isLoadingFullText {
+                                ProgressView().scaleEffect(0.7).frame(width: 16, height: 16)
+                            } else {
+                                Button(action: { Task { await loadFullText(url: url) } }) {
+                                    Label(
+                                        fullTextHTML != nil ? "Volltext neu laden" : "Volltext laden",
+                                        systemImage: "doc.text.magnifyingglass"
+                                    )
+                                }
+                                .buttonStyle(.borderless)
+                            }
+                        }
+
+                        // Schriftgröße
+                        HStack(spacing: 4) {
+                            Button(action: { readingSettings.decrease() }) {
+                                Image(systemName: "textformat.size.smaller")
+                            }
+                            .buttonStyle(.borderless)
+                            .help("Schrift verkleinern")
+
+                            Text("\(readingSettings.fontSize)")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                                .frame(minWidth: 20)
+
+                            Button(action: { readingSettings.increase() }) {
+                                Image(systemName: "textformat.size.larger")
+                            }
+                            .buttonStyle(.borderless)
+                            .help("Schrift vergrößern")
+                        }
+
+                        // Theme-Picker
+                        Picker("Lesemodus", selection: $readingSettings.theme) {
+                            ForEach(ReadingTheme.allCases, id: \.self) { theme in
+                                Image(systemName: theme.icon).tag(theme)
+                            }
+                        }
+                        .pickerStyle(.segmented)
+                        .frame(width: 90)
+                        .help("Lesemodus wählen")
                     }
                 }
                 .padding()
@@ -73,14 +128,28 @@ struct ArticleDetailView: View {
                 Divider()
 
                 // Inhalt
-                if let html = item.contentHTML ?? item.itemDescription {
-                    WebContentView(html: html)
+                let htmlToShow = fullTextHTML ?? item.contentHTML ?? item.itemDescription
+                if let html = htmlToShow {
+                    WebContentView(html: html, fontSize: readingSettings.fontSize, theme: readingSettings.theme)
                 } else {
                     ContentUnavailableView(
                         "Kein Inhalt",
                         systemImage: "doc.text",
                         description: Text("Dieser Artikel hat keinen Inhalt zum Anzeigen.")
                     )
+                }
+            }
+            .onChange(of: item) { _, newItem in
+                // Volltext zurücksetzen wenn Artikel wechselt
+                fullTextHTML = nil
+                // Automatisch laden wenn feed.fullTextEnabled
+                if newItem.feed?.fullTextEnabled == true, let url = newItem.url {
+                    Task { await loadFullText(url: url) }
+                }
+            }
+            .onAppear {
+                if item.feed?.fullTextEnabled == true, let url = item.url {
+                    Task { await loadFullText(url: url) }
                 }
             }
         } else {
@@ -91,19 +160,39 @@ struct ArticleDetailView: View {
             )
         }
     }
+
+    // MARK: – Volltext
+
+    private func loadFullText(url: URL) async {
+        isLoadingFullText = true
+        fullTextHTML = await FullTextService.fetchFullText(from: url)
+        isLoadingFullText = false
+    }
 }
+
+// MARK: – WKWebView
 
 struct WebContentView: NSViewRepresentable {
     let html: String
+    var fontSize: Int = 15
+    var theme: ReadingTheme = .standard
 
     func makeNSView(context: Context) -> WKWebView {
-        let config = WKWebViewConfiguration()
-        let webView = WKWebView(frame: .zero, configuration: config)
+        let webView = WKWebView(frame: .zero, configuration: WKWebViewConfiguration())
         webView.setValue(false, forKey: "drawsBackground")
         return webView
     }
 
     func updateNSView(_ webView: WKWebView, context: Context) {
+        let bg     = theme.background
+        let fg     = theme.foreground
+        let link   = theme.link
+        let scheme = theme.colorScheme
+
+        let bgCSS = bg == "unset"
+            ? "background: transparent;"
+            : "background: \(bg);"
+
         let styledHTML = """
         <!DOCTYPE html>
         <html>
@@ -111,32 +200,38 @@ struct WebContentView: NSViewRepresentable {
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <style>
-            :root { color-scheme: light dark; }
+            :root { color-scheme: \(scheme); }
+            html, body {
+                \(bgCSS)
+                color: \(fg);
+            }
             body {
                 font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
-                font-size: 15px;
-                line-height: 1.6;
-                padding: 16px;
+                font-size: \(fontSize)px;
+                line-height: 1.7;
+                padding: 16px 20px;
                 margin: 0;
-                color: inherit;
                 max-width: 100%;
                 word-wrap: break-word;
             }
             img { max-width: 100%; height: auto; border-radius: 8px; }
-            a { color: -apple-system-blue; }
+            a { color: \(link); }
             pre, code {
-                background: rgba(128, 128, 128, 0.1);
+                background: rgba(128,128,128,0.12);
                 border-radius: 4px;
                 padding: 2px 6px;
-                font-size: 13px;
+                font-size: \(max(fontSize - 2, 11))px;
             }
             pre { padding: 12px; overflow-x: auto; }
             blockquote {
-                border-left: 3px solid rgba(128, 128, 128, 0.3);
+                border-left: 3px solid rgba(128,128,128,0.35);
                 margin-left: 0;
                 padding-left: 16px;
-                color: rgba(128, 128, 128, 0.8);
+                opacity: 0.8;
             }
+            h1, h2, h3 { line-height: 1.3; }
+            figure { margin: 12px 0; }
+            figcaption { font-size: \(max(fontSize - 2, 11))px; opacity: 0.7; text-align: center; }
         </style>
         </head>
         <body>

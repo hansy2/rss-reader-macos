@@ -11,6 +11,7 @@ final class Feed {
     var lastFetchedAt: Date?
     var refreshIntervalMinutes: Int
     var isEnabled: Bool
+    var fullTextEnabled: Bool
     var createdAt: Date
 
     @Relationship(deleteRule: .cascade, inverse: \FeedItem.feed)
@@ -26,6 +27,7 @@ final class Feed {
         imageURL: URL? = nil,
         refreshIntervalMinutes: Int = 0,
         isEnabled: Bool = true,
+        fullTextEnabled: Bool = false,
         createdAt: Date = .now
     ) {
         self.title = title
@@ -35,6 +37,7 @@ final class Feed {
         self.imageURL = imageURL
         self.refreshIntervalMinutes = refreshIntervalMinutes
         self.isEnabled = isEnabled
+        self.fullTextEnabled = fullTextEnabled
         self.createdAt = createdAt
     }
 

@@ -28,12 +28,19 @@ targets:
         PRODUCT_NAME: RSSReader
         SWIFT_VERSION: 5.10
         MACOSX_DEPLOYMENT_TARGET: "14.0"
-        CODE_SIGN_STYLE: Automatic
-        CODE_SIGN_IDENTITY: "Apple Development"
         CODE_SIGNING_REQUIRED: YES
         DEVELOPMENT_TEAM: DCF47747Q6
         INFOPLIST_FILE: RSSReader/Info.plist
         CODE_SIGN_ENTITLEMENTS: RSSReader/RSSReader.entitlements
+        ENABLE_HARDENED_RUNTIME: YES
+      configs:
+        Debug:
+          CODE_SIGN_STYLE: Automatic
+          CODE_SIGN_IDENTITY: "Apple Development"
+        Release:
+          CODE_SIGN_STYLE: Manual
+          CODE_SIGN_IDENTITY: "Developer ID Application"
+          PROVISIONING_PROFILE_SPECIFIER: ""
 
   RSSReaderWidget:
     type: app-extension
@@ -48,13 +55,20 @@ targets:
         PRODUCT_NAME: RSSReaderWidget
         SWIFT_VERSION: 5.10
         MACOSX_DEPLOYMENT_TARGET: "14.0"
-        CODE_SIGN_STYLE: Automatic
-        CODE_SIGN_IDENTITY: "Apple Development"
         CODE_SIGNING_REQUIRED: YES
         DEVELOPMENT_TEAM: DCF47747Q6
         INFOPLIST_FILE: RSSReaderWidget/Info.plist
         CODE_SIGN_ENTITLEMENTS: RSSReaderWidget/RSSReaderWidget.entitlements
         LD_RUNPATH_SEARCH_PATHS: $(inherited) @executable_path/../../../../Frameworks @executable_path/../Frameworks
+        ENABLE_HARDENED_RUNTIME: YES
+      configs:
+        Debug:
+          CODE_SIGN_STYLE: Automatic
+          CODE_SIGN_IDENTITY: "Apple Development"
+        Release:
+          CODE_SIGN_STYLE: Manual
+          CODE_SIGN_IDENTITY: "Developer ID Application"
+          PROVISIONING_PROFILE_SPECIFIER: ""
 
 schemes:
   RSSReader:

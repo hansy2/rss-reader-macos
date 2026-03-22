@@ -85,43 +85,129 @@ struct SmallWidgetView: View {
     }
 }
 
-// MARK: - Medium (4 Artikel mit Feed-Name + Zeit)
+// MARK: - Medium (Split: Hauptartikel links + 3 weitere rechts)
 
 struct MediumWidgetView: View {
     let articles: [WidgetArticle]
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            WidgetHeader(count: articles.count)
-                .padding(.horizontal, 12)
-                .padding(.top, 10)
-                .padding(.bottom, 6)
-            Divider()
-            if articles.isEmpty {
-                emptyState
-            } else {
-                ForEach(Array(articles.prefix(4).enumerated()), id: \.element.id) { index, article in
-                    ArticleRowView(article: article)
-                    if index < min(articles.count, 4) - 1 {
-                        Divider().padding(.leading, 12)
+        if articles.isEmpty {
+            emptyState
+        } else {
+            HStack(spacing: 0) {
+                // Linke Seite: Hauptartikel (featured)
+                featuredArticle(articles[0])
+
+                Divider()
+
+                // Rechte Seite: 3 weitere Artikel
+                VStack(alignment: .leading, spacing: 0) {
+                    ForEach(Array(articles.dropFirst().prefix(3).enumerated()), id: \.element.id) { index, article in
+                        smallArticleRow(article)
+                        if index < min(articles.count - 1, 3) - 1 {
+                            Divider()
+                        }
                     }
+                    Spacer(minLength: 0)
                 }
+                .frame(maxWidth: .infinity)
             }
-            Spacer(minLength: 0)
         }
     }
 
+    private func featuredArticle(_ article: WidgetArticle) -> some View {
+        let dest: URL = {
+            var c = URLComponents()
+            c.scheme = "rssreader"; c.host = "article"
+            c.queryItems = [URLQueryItem(name: "id", value: article.id)]
+            return c.url ?? URL(string: "rssreader://open")!
+        }()
+
+        return Link(destination: dest) {
+            VStack(alignment: .leading, spacing: 6) {
+                // Header Badge
+                HStack(spacing: 4) {
+                    Image(systemName: "dot.radiowaves.up.forward")
+                        .font(.system(size: 9, weight: .bold))
+                        .foregroundStyle(.blue)
+                    Text("Aktuell")
+                        .font(.system(size: 9, weight: .bold))
+                        .foregroundStyle(.blue)
+                        .textCase(.uppercase)
+                }
+
+                Spacer(minLength: 0)
+
+                // Titel
+                Text(article.title)
+                    .font(.system(size: 13, weight: .bold))
+                    .lineLimit(4)
+                    .foregroundStyle(.primary)
+                    .multilineTextAlignment(.leading)
+
+                // Meta
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(article.feedTitle)
+                        .font(.system(size: 10, weight: .medium))
+                        .foregroundStyle(.blue)
+                        .lineLimit(1)
+                    if let date = article.publishedAt {
+                        Text(date, style: .relative)
+                            .font(.system(size: 10))
+                            .foregroundStyle(.secondary)
+                    }
+                }
+            }
+            .padding(12)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func smallArticleRow(_ article: WidgetArticle) -> some View {
+        let dest: URL = {
+            var c = URLComponents()
+            c.scheme = "rssreader"; c.host = "article"
+            c.queryItems = [URLQueryItem(name: "id", value: article.id)]
+            return c.url ?? URL(string: "rssreader://open")!
+        }()
+
+        return Link(destination: dest) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(article.title)
+                    .font(.system(size: 11, weight: .medium))
+                    .lineLimit(2)
+                    .foregroundStyle(.primary)
+                HStack {
+                    Text(article.feedTitle)
+                        .font(.system(size: 9))
+                        .foregroundStyle(.blue)
+                        .lineLimit(1)
+                    Spacer()
+                    if let date = article.publishedAt {
+                        Text(date, style: .relative)
+                            .font(.system(size: 9))
+                            .foregroundStyle(.tertiary)
+                    }
+                }
+            }
+            .padding(.horizontal, 10)
+            .padding(.vertical, 7)
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .buttonStyle(.plain)
+    }
+
     private var emptyState: some View {
-        VStack {
-            Spacer()
-            Text("RSSReader starten und Feeds hinzufügen")
+        VStack(spacing: 8) {
+            Image(systemName: "newspaper")
+                .font(.title2)
+                .foregroundStyle(.tertiary)
+            Text("Noch keine Artikel")
                 .font(.caption)
                 .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
-                .padding()
-            Spacer()
         }
-        .frame(maxWidth: .infinity)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 }
 

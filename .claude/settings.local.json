@@ -1,0 +1,21 @@
+{
+  "permissions": {
+    "allow": [
+      "WebSearch",
+      "Bash(sort find:*)",
+      "Bash(swift build:*)",
+      "Bash(git -C \"/Users/ricoreinheckel/Desktop/Neuer Ordner/.claude/worktrees/stupefied-nightingale\" show 3352b14 --stat)",
+      "Bash(brew install:*)",
+      "Bash(\"/Users/ricoreinheckel/Desktop/Neuer Ordner/.claude/worktrees/stupefied-nightingale/RSSReader/project.yml\":*)",
+      "Bash(xcodegen generate:*)",
+      "mcp__XcodeBuildMCP__discover_projs",
+      "mcp__XcodeBuildMCP__session_set_defaults",
+      "mcp__XcodeBuildMCP__list_schemes",
+      "Bash(xcodebuild build:*)",
+      "Bash(find '/Users/ricoreinheckel/Desktop/Neuer Ordner/.claude/worktrees/stupefied-nightingale/RSSReader' -name project.yml -o -name *.xcodeproj -type d)",
+      "Bash(xcodebuild -project RSSReader.xcodeproj -scheme RSSReader -destination 'platform=macOS' -configuration Debug CODE_SIGN_IDENTITY=\"-\" CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO)",
+      "Bash(open \"/Users/ricoreinheckel/Library/Developer/Xcode/DerivedData/RSSReader-dvapxjzuwtzeibbqozuolbegmhuf/Build/Products/Debug/RSSReader.app\")",
+      "mcp__XcodeBuildMCP__screenshot"
+    ]
+  }
+}

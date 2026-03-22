@@ -8,6 +8,7 @@ enum SharedModelContainer {
             FeedGroup.self,
             FeedItem.self,
             Rule.self,
+            SmartFolder.self,
         ])
 
         let storeURL = AppGroupConfig.containerURL.appending(path: "RSSReader.store")
