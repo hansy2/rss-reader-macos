@@ -24,97 +24,67 @@ echo "⚙️  Generiere Xcode-Projekt..."
 cd "$RSSREADER_DIR"
 xcodegen generate
 
-# 3. Gültiges Signing-Zertifikat prüfen
-CERT=$(security find-identity -v -p codesigning 2>/dev/null | grep "Mac Development\|Apple Development" | head -1)
-TEAM_ID="${DEVELOPMENT_TEAM:-}"
-
-if [ -z "$CERT" ] || [ -z "$(echo "$CERT" | grep -oE '[A-Z0-9]{10}')" ]; then
-    echo ""
-    echo "⚠️  Kein gültiges Signing-Zertifikat gefunden."
-    echo ""
-    echo "   Bitte jetzt in Xcode anmelden (einmalig, kostenlos):"
-    echo ""
-    echo "   1. Xcode öffnet sich gleich"
-    echo "   2. Xcode → Settings (⌘,) → Accounts → + → Apple ID"
-    echo "   3. Deine Apple ID eingeben und anmelden"
-    echo "   4. Danach dieses Terminal-Fenster wieder aktivieren"
-    echo "   5. Enter drücken um weiterzumachen"
-    echo ""
-    open "$RSSREADER_DIR/RSSReader.xcodeproj"
-    read -p "   [Enter drücken wenn du in Xcode angemeldet bist]"
-    echo ""
-
-    # Erneut prüfen
-    CERT=$(security find-identity -v -p codesigning 2>/dev/null | grep "Mac Development\|Apple Development" | head -1)
-    if [ -z "$CERT" ]; then
-        echo "❌ Immer noch kein Zertifikat. Bitte in Xcode anmelden und erneut versuchen."
-        exit 1
-    fi
-fi
-
-# Team-ID aus Zertifikat extrahieren
-if [ -z "$TEAM_ID" ]; then
-    TEAM_ID=$(echo "$CERT" | grep -oE '[A-Z0-9]{10}' | head -1)
-fi
-
-echo "✅ Zertifikat: $(echo "$CERT" | sed 's/.*) //')"
-echo "✅ Team-ID:    $TEAM_ID"
-
-# 4. Build
+# 3. In Xcode bauen lassen
 echo ""
-echo "🔨 Baue App (Release) – das dauert ca. 1-2 Minuten..."
-BUILD_DIR=$(mktemp -d)
+echo "📂 Öffne Xcode..."
+open "$RSSREADER_DIR/RSSReader.xcodeproj"
 
-set +e
-BUILD_OUTPUT=$(xcodebuild \
-    -project "$RSSREADER_DIR/RSSReader.xcodeproj" \
-    -scheme RSSReader \
-    -configuration Release \
-    -derivedDataPath "$BUILD_DIR" \
-    DEVELOPMENT_TEAM="$TEAM_ID" \
-    CODE_SIGN_STYLE=Automatic \
-    -allowProvisioningUpdates \
-    build 2>&1)
-BUILD_EXIT=$?
-set -e
+echo ""
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo "  Bitte jetzt in Xcode:"
+echo ""
+echo "  1. Falls noch kein Account: Xcode → Settings (⌘,)"
+echo "     → Accounts → + → Apple ID eingeben"
+echo ""
+echo "  2. Im Projekt-Navigator oben 'RSSReader' anklicken"
+echo "     → Signing & Capabilities → Team auswählen"
+echo "     (für RSSReader UND RSSReaderWidget)"
+echo ""
+echo "  3. Scheme oben auf 'RSSReader' + 'My Mac' stellen"
+echo ""
+echo "  4. ⌘B drücken (Build) – warten bis 'Build Succeeded'"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo ""
+read -p "  [Enter drücken wenn 'Build Succeeded' erschienen ist]"
+echo ""
 
-if [ $BUILD_EXIT -ne 0 ]; then
-    echo ""
-    echo "❌ Build fehlgeschlagen. Fehlerdetails:"
-    echo "$BUILD_OUTPUT" | grep "error:" | head -20
-    echo ""
-    echo "   Tipp: Öffne das Projekt in Xcode und prüfe Signing & Capabilities:"
-    echo "   open '$RSSREADER_DIR/RSSReader.xcodeproj'"
-    rm -rf "$BUILD_DIR"
-    exit 1
-fi
+# 4. App aus DerivedData suchen und installieren
+echo "🔍 Suche gebaute App..."
+DERIVED_DATA="$HOME/Library/Developer/Xcode/DerivedData"
+APP_PATH=$(find "$DERIVED_DATA" -name "$APP_NAME" -path "*/Build/Products/Release/*" -type d 2>/dev/null | \
+    grep -i "RSSReader" | sort -t/ -k1,1 | tail -1)
 
-# 5. App finden
-APP_PATH=$(find "$BUILD_DIR/Build/Products" -name "$APP_NAME" -type d | head -1)
+# Fallback: Debug-Build
 if [ -z "$APP_PATH" ]; then
-    echo "❌ App nach Build nicht gefunden."
-    rm -rf "$BUILD_DIR"
+    APP_PATH=$(find "$DERIVED_DATA" -name "$APP_NAME" -path "*/Build/Products/Debug/*" -type d 2>/dev/null | \
+        grep -i "RSSReader" | sort | tail -1)
+fi
+
+if [ -z "$APP_PATH" ]; then
+    echo "❌ App nicht gefunden. Wurde der Build in Xcode erfolgreich abgeschlossen?"
+    echo "   Suche in: $DERIVED_DATA"
     exit 1
 fi
 
-# 6. In /Applications installieren
+echo "   Gefunden: $APP_PATH"
+
+# 5. Installieren
 echo "📲 Installiere nach /Applications..."
 if [ -d "$INSTALL_PATH" ]; then
     echo "   (Alte Version wird ersetzt)"
     rm -rf "$INSTALL_PATH"
 fi
 cp -R "$APP_PATH" /Applications/
-rm -rf "$BUILD_DIR"
 
-# 7. App starten (damit macOS das Widget registriert)
+# 6. App starten
 echo "🚀 Starte RSSReader..."
 open "$INSTALL_PATH"
 
 echo ""
-echo "✅ Fertig! RSSReader wurde nach /Applications installiert."
+echo "✅ Fertig! RSSReader ist in /Applications installiert."
 echo ""
 echo "   Widget aktivieren:"
 echo "   1. Rechtsklick auf den Desktop → 'Widgets bearbeiten'"
 echo "   2. Links 'RSSReader' suchen"
-echo "   3. Widget per Klick oder Drag hinzufügen"
+echo "   3. Widget hinzufügen"
 echo ""

@@ -29,6 +29,8 @@ targets:
         SWIFT_VERSION: 5.10
         MACOSX_DEPLOYMENT_TARGET: "14.0"
         CODE_SIGN_STYLE: Automatic
+        CODE_SIGN_IDENTITY: "Apple Development"
+        CODE_SIGNING_REQUIRED: YES
         DEVELOPMENT_TEAM: ""
         INFOPLIST_FILE: RSSReader/Info.plist
 
@@ -46,6 +48,8 @@ targets:
         SWIFT_VERSION: 5.10
         MACOSX_DEPLOYMENT_TARGET: "14.0"
         CODE_SIGN_STYLE: Automatic
+        CODE_SIGN_IDENTITY: "Apple Development"
+        CODE_SIGNING_REQUIRED: YES
         DEVELOPMENT_TEAM: ""
         INFOPLIST_FILE: RSSReaderWidget/Info.plist
         LD_RUNPATH_SEARCH_PATHS: $(inherited) @executable_path/../../../../Frameworks @executable_path/../Frameworks
