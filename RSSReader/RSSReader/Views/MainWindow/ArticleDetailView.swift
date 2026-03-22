@@ -122,6 +122,7 @@ struct ArticleDetailView: View {
                             }
                         }
                         .pickerStyle(.segmented)
+                        .labelsHidden()
                         .frame(width: 90)
                         .help("Lesemodus wählen")
                     }
