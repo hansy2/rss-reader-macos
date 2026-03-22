@@ -38,31 +38,31 @@ struct ArticleDetailView: View {
                         }
                     }
 
-                    HStack(spacing: 12) {
+                    HStack(spacing: 8) {
                         // Stern
                         Button(action: { item.isStarred.toggle(); try? modelContext.save() }) {
-                            Label(
-                                item.isStarred ? "Favorit entfernen" : "Als Favorit",
-                                systemImage: item.isStarred ? "star.fill" : "star"
-                            )
+                            Image(systemName: item.isStarred ? "star.fill" : "star")
+                                .foregroundStyle(item.isStarred ? .yellow : .secondary)
                         }
                         .buttonStyle(.borderless)
+                        .help(item.isStarred ? "Favorit entfernen" : "Als Favorit markieren")
 
                         // Gelesen
                         Button(action: { item.isRead.toggle(); try? modelContext.save() }) {
-                            Label(
-                                item.isRead ? "Ungelesen" : "Gelesen",
-                                systemImage: item.isRead ? "envelope" : "envelope.open"
-                            )
+                            Image(systemName: item.isRead ? "envelope" : "envelope.open")
+                                .foregroundStyle(.secondary)
                         }
                         .buttonStyle(.borderless)
+                        .help(item.isRead ? "Als ungelesen markieren" : "Als gelesen markieren")
 
                         if let url = item.url {
                             // Browser
                             Button(action: { NSWorkspace.shared.open(url) }) {
-                                Label("Im Browser öffnen", systemImage: "safari")
+                                Image(systemName: "safari")
+                                    .foregroundStyle(.secondary)
                             }
                             .buttonStyle(.borderless)
+                            .help("Im Browser öffnen")
 
                             // Teilen
                             ShareLink(
@@ -70,9 +70,11 @@ struct ArticleDetailView: View {
                                 subject: Text(item.title),
                                 message: Text(item.title)
                             ) {
-                                Label("Teilen", systemImage: "square.and.arrow.up")
+                                Image(systemName: "square.and.arrow.up")
+                                    .foregroundStyle(.secondary)
                             }
                             .buttonStyle(.borderless)
+                            .help("Teilen")
                         }
 
                         Spacer()
@@ -83,14 +85,15 @@ struct ArticleDetailView: View {
                                 ProgressView().scaleEffect(0.7).frame(width: 16, height: 16)
                             } else {
                                 Button(action: { Task { await loadFullText(url: url) } }) {
-                                    Label(
-                                        fullTextHTML != nil ? "Volltext neu laden" : "Volltext laden",
-                                        systemImage: "doc.text.magnifyingglass"
-                                    )
+                                    Image(systemName: "doc.text.magnifyingglass")
+                                        .foregroundStyle(.secondary)
                                 }
                                 .buttonStyle(.borderless)
+                                .help(fullTextHTML != nil ? "Volltext neu laden" : "Volltext laden")
                             }
                         }
+
+                        Divider().frame(height: 16)
 
                         // Schriftgröße
                         HStack(spacing: 4) {
