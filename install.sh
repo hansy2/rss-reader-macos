@@ -42,22 +42,26 @@ echo "     (für RSSReader UND RSSReaderWidget)"
 echo ""
 echo "  3. Scheme oben auf 'RSSReader' + 'My Mac' stellen"
 echo ""
-echo "  4. ⌘B drücken (Build) – warten bis 'Build Succeeded'"
+echo "  4. Product → Scheme → Edit Scheme → Run → Build Configuration:"
+echo "     → 'Release' auswählen (wichtig für Widget-Registrierung!)"
+echo ""
+echo "  5. ⌘B drücken (Build) – warten bis 'Build Succeeded'"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo ""
-read -p "  [Enter drücken wenn 'Build Succeeded' erschienen ist]"
+read -p "  [Enter drücken wenn 'Build Succeeded' im Release-Modus erschienen ist]"
 echo ""
 
 # 4. App aus DerivedData suchen und installieren
 echo "🔍 Suche gebaute App..."
 DERIVED_DATA="$HOME/Library/Developer/Xcode/DerivedData"
 APP_PATH=$(find "$DERIVED_DATA" -name "$APP_NAME" -path "*/Build/Products/Release/*" -type d 2>/dev/null | \
-    grep -i "RSSReader" | sort -t/ -k1,1 | tail -1)
+    grep -i "RSSReader" | xargs -I{} stat -f "%m {}" {} 2>/dev/null | sort -rn | head -1 | cut -d' ' -f2-)
 
-# Fallback: Debug-Build
 if [ -z "$APP_PATH" ]; then
+    echo "⚠️  Kein Release-Build gefunden – suche Debug-Build..."
+    echo "   Hinweis: Für das Widget wird ein Release-Build benötigt!"
     APP_PATH=$(find "$DERIVED_DATA" -name "$APP_NAME" -path "*/Build/Products/Debug/*" -type d 2>/dev/null | \
-        grep -i "RSSReader" | sort | tail -1)
+        grep -i "RSSReader" | xargs -I{} stat -f "%m {}" {} 2>/dev/null | sort -rn | head -1 | cut -d' ' -f2-)
 fi
 
 if [ -z "$APP_PATH" ]; then
