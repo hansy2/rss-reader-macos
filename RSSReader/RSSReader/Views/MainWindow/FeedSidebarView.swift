@@ -57,7 +57,7 @@ struct FeedSidebarView: View {
             List(selection: $selectedFeed) {
                 Section {
                     ForEach(filteredFeeds) { feed in
-                    FeedRowView(feed: feed)
+                        FeedRowView(feed: feed)
                         .tag(feed)
                         .contextMenu {
                             Button("Umbenennen") {

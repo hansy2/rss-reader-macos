@@ -178,8 +178,11 @@ struct AddFeedView: View {
 
     private func insertFeed(url: URL, title: String) {
         let urlString = url.absoluteString
-        let descriptor = FetchDescriptor<Feed>(predicate: #Predicate { $0.url.absoluteString == urlString })
-        if let existing = try? modelContext.fetch(descriptor), !existing.isEmpty {
+        // SwiftData #Predicate kann keine berechneten Eigenschaften wie .absoluteString
+        // auf URL-Feldern verwenden → alle Feeds laden und im Speicher vergleichen.
+        let descriptor = FetchDescriptor<Feed>()
+        if let all = try? modelContext.fetch(descriptor),
+           all.contains(where: { $0.url.absoluteString == urlString }) {
             errorMessage = "Dieser Feed ist bereits vorhanden."; isLoading = false; return
         }
         let feed = Feed(title: title, url: url)
