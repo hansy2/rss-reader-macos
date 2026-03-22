@@ -33,13 +33,16 @@ targets:
         INFOPLIST_FILE: RSSReader/Info.plist
         CODE_SIGN_ENTITLEMENTS: RSSReader/RSSReader.entitlements
         ENABLE_HARDENED_RUNTIME: YES
+        CODE_SIGN_INJECT_BASE_ENTITLEMENTS: NO
+        OTHER_CODE_SIGN_FLAGS: "--timestamp"
       configs:
         Debug:
           CODE_SIGN_STYLE: Automatic
           CODE_SIGN_IDENTITY: "Apple Development"
+          CODE_SIGN_INJECT_BASE_ENTITLEMENTS: YES
         Release:
           CODE_SIGN_STYLE: Manual
-          CODE_SIGN_IDENTITY: "Developer ID Application"
+          CODE_SIGN_IDENTITY: "Developer ID Application: Rico Reinheckel (DCF47747Q6)"
           PROVISIONING_PROFILE_SPECIFIER: ""
 
   RSSReaderWidget:
@@ -61,13 +64,16 @@ targets:
         CODE_SIGN_ENTITLEMENTS: RSSReaderWidget/RSSReaderWidget.entitlements
         LD_RUNPATH_SEARCH_PATHS: $(inherited) @executable_path/../../../../Frameworks @executable_path/../Frameworks
         ENABLE_HARDENED_RUNTIME: YES
+        CODE_SIGN_INJECT_BASE_ENTITLEMENTS: NO
+        OTHER_CODE_SIGN_FLAGS: "--timestamp"
       configs:
         Debug:
           CODE_SIGN_STYLE: Automatic
           CODE_SIGN_IDENTITY: "Apple Development"
+          CODE_SIGN_INJECT_BASE_ENTITLEMENTS: YES
         Release:
           CODE_SIGN_STYLE: Manual
-          CODE_SIGN_IDENTITY: "Developer ID Application"
+          CODE_SIGN_IDENTITY: "Developer ID Application: Rico Reinheckel (DCF47747Q6)"
           PROVISIONING_PROFILE_SPECIFIER: ""
 
 schemes:
