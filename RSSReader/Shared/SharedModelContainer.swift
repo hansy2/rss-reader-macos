@@ -20,6 +20,22 @@ enum SharedModelContainer {
             cloudKitDatabase: .none
         )
 
-        return try ModelContainer(for: schema, configurations: [config])
+        do {
+            return try ModelContainer(for: schema, configurations: [config])
+        } catch {
+            // Schema-Migration fehlgeschlagen (z.B. neues Modell oder neues Feld).
+            // Store-Dateien löschen und neu anlegen — Feeds werden beim nächsten
+            // Refresh automatisch wieder befüllt.
+            let dir = storeURL.deletingLastPathComponent()
+            let name = storeURL.lastPathComponent
+            if let files = try? FileManager.default.contentsOfDirectory(
+                at: dir, includingPropertiesForKeys: nil
+            ) {
+                for file in files where file.lastPathComponent.hasPrefix(name) {
+                    try? FileManager.default.removeItem(at: file)
+                }
+            }
+            return try ModelContainer(for: schema, configurations: [config])
+        }
     }
 }
